@@ -1,4 +1,4 @@
-﻿using System;
+﻿using WebSocketSharp.Server;
 
 namespace AmpleChatServer
 {
@@ -6,6 +6,9 @@ namespace AmpleChatServer
     {
         static void Main(string[] args)
         {
+            var ws = new WebSocketServer(49152);
+
+            ws.Start();
         }
     }
 }
