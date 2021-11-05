@@ -13,7 +13,7 @@ namespace AmpleChatServer
         {
             var ws = new WebSocketServer(URL);
 
-            ws.AddWebSocketService("/do_you_know_the_way", () => new WayPoint { });
+            ws.AddWebSocketService("/amplechat/v1", () => new AmpleUser { });
             
             ws.Start();
 
