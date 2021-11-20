@@ -1,102 +1,112 @@
-﻿using AmpleChatLibrary.User;
-using System;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
+﻿using System;
+using System.Net;
+using System.Threading.Tasks;
 using WebSocketSharp;
-using WebSocketSharp.Server;
+using AmpleChatServer.Services.Packets;
+using AmpleChatLibrary.User;
+using static AmpleChatServer.Services.Packets.Packet;
+using Newtonsoft.Json;
 
 namespace AmpleChatServer.Services {
-    public class AccountService : WebSocketBehavior {
-        const int REGISTER = 0;
-        const int LOGIN = 1;
-        static readonly string USER_API_URL_DEV = "http://localhost:44396/api/user";
-
-        HttpClient httpClient;
-
-        public AccountService(HttpClient cliet) {
-
-            httpClient = cliet;
-        }
+    public class AccountService : ApiService {
 
         protected override void OnOpen() {
             base.OnOpen();
-            Send(Guid.NewGuid().ToString());
+            SendPacket(new Packet(PacketType.INFO_PACKET).Add("connectionId", ID));
         }
 
         protected async override void OnMessage(MessageEventArgs e) {
 
-            // "0,name,password"
-            var query = e.Data.Split(",");
-            int type;
+            var message = e.Data;
 
-            var hasValue = int.TryParse(query[0], out type);
-
-            if (hasValue) {
-
-                switch(type) {
-                    case REGISTER:
-                        {
-                            var model = new RegisterModel {
-                                Email = query[1],
-                                Password = query[2],
-                                UserName = query[3]
-                            };
-
-                            StringContent data = new StringContent(JsonSerializer.Serialize(model), Encoding.UTF8, "application/json");
-
-                            try {
-
-                                var response = await httpClient.PutAsync("account", data);
-
-                                if (response.StatusCode == 0) {
-                                    Send("Regiser worksk");
-                                }
-                                else {
-                                    Send(JsonSerializer.Serialize(response));
-                                }
-                            }
-                            catch (Exception ex) {
-                                Send(JsonSerializer.Serialize(ex));
-                            }
-
-
-                        }
-                        break;
-
- 
-
-                    case LOGIN:
-                       {
-                            var model = new LoginModel {
-                                UserNameOrEmail = query[1],
-                                Password = query[2]
-                            };
-
-                            StringContent data = new StringContent(JsonSerializer.Serialize(model), Encoding.UTF8, "application/json");
-
-                            try {
-
-                                var response = await httpClient.PostAsync("account", data);
-
-                                if (response.StatusCode == 0) {
-                                    Send("Login works");
-                                }
-                                else {
-                                    Send(JsonSerializer.Serialize(response));
-                                }
-                            }
-                            catch (Exception ex) {
-                                Send(JsonSerializer.Serialize(ex));
-                            }
-
-                        }
-                        break;
-
-                    default:break;
-                }
-
+            if (string.IsNullOrEmpty(message)) {
+                SendPacket(new ErrorPacket()
+                    .Message("Empty message"));
+                Sessions.CloseSession(ID);
+                return;
             }
+
+            var packet = ParsePacket(message);
+
+            string json;
+            var id = packet.GetPacketId();
+
+            switch (id) {
+                case PacketType.REGISER_PACKET:
+
+                    json = JsonConvert.SerializeObject(new RegisterModel
+                    {
+                        Email = packet.Get("email"),
+                        Password = packet.Get("password"),
+                        UserName = packet.Get("username")
+                    });
+
+                    await HandleRegister(json);
+
+                    break;
+
+                case PacketType.LOGIN_PACKET:
+
+                    json = JsonConvert.SerializeObject(new LoginModel
+                    {
+                        Password = packet.Get("password"),
+                        UserNameOrEmail = packet.Get("credentials"),
+                    });
+
+                    await HandleLogin(json);
+
+                    break;
+
+                default:
+                    Sessions.CloseSession(ID);
+                    break;
+            }
+        }
+
+        private async Task HandleRegister(string json) {
+            var putResult = await Put(json);
+
+            switch (putResult.StatusCode) {
+
+                case HttpStatusCode.OK:
+                    SendPacket(new Packet(PacketType.REGISER_RESPONSE)
+                        .Add("accountCreated", true));
+                    break;
+
+                case HttpStatusCode.BadRequest:
+                case HttpStatusCode.BadGateway:
+                    SendPacket(new ErrorPacket()
+                        .Message(await putResult.Content.ReadAsStringAsync()));
+                    break;
+
+                default:
+                    SendPacket(new ErrorPacket()
+                        .Message("Unkown error"));
+                    break;
+            }
+        }
+
+        private async Task HandleLogin(string json) {
+
+            var postResult = await Post(json);
+
+            switch (postResult.StatusCode) {
+
+                case HttpStatusCode.OK:
+                    SendPacket(new Packet(PacketType.LOGIN_RESPONSE)
+                        .Add("accountAuthenticated", true));
+                    break;
+
+                case HttpStatusCode.BadRequest:
+                case HttpStatusCode.BadGateway:
+                    SendPacket(new ErrorPacket()
+                        .Message(await postResult.Content.ReadAsStringAsync()));
+                    break;
+            }
+        }
+
+        private void SendPacket(Packet packet) {
+            Send(packet.ToString());
         }
 
         protected override void OnClose(CloseEventArgs e) {
@@ -105,6 +115,7 @@ namespace AmpleChatServer.Services {
 
         protected override void OnError(ErrorEventArgs e) {
             base.OnError(e);
+            Console.WriteLine($"[ERROR]: {e.Message}");
         }
     }
 }
