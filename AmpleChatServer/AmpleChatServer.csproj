@@ -10,10 +10,4 @@
     <PackageReference Include="WebSocketSharp" Version="1.0.3-rc11" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="AmpleChatLibrary">
-      <HintPath>..\..\..\AmpleChatLibrary\AmpleChatLibrary\bin\Release\net5.0\AmpleChatLibrary.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>

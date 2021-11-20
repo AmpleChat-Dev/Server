@@ -3,7 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using WebSocketSharp;
 using AmpleChatServer.Services.Packets;
-using AmpleChatLibrary.User;
+using AmpleChatServer.Models;
 using static AmpleChatServer.Services.Packets.Packet;
 using Newtonsoft.Json;
 
