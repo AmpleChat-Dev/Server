@@ -36,7 +36,11 @@ namespace AmpleChatServer {
                 ApiController = "account",
                 HttpClient = client
             });
-            ws.AddWebSocketService("/chat", () => new ChatService());
+
+            ws.AddWebSocketService("/chat", () => new ChatService {
+                ApiController = "chat",
+                HttpClient = client
+            });
 
             ws.Start();
 
