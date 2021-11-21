@@ -5,13 +5,13 @@ using System.Globalization;
 
 namespace AmpleChatServer.Services.Packets {
     public enum PacketType {
-        NULL = -1, 
-        ERROR = -2,
-        INFO_PACKET = 0,
-        REGISER_PACKET = 1,
-        REGISER_RESPONSE = 2,
-        LOGIN_PACKET = 3,
-        LOGIN_RESPONSE = 4,
+        NULL, 
+        ERROR,
+        INFO_PACKET,
+        REGISER_PACKET,
+        REGISER_RESPONSE,
+        LOGIN_PACKET,
+        LOGIN_RESPONSE,
     }
 
     public class Packet { // struct???
@@ -22,11 +22,18 @@ namespace AmpleChatServer.Services.Packets {
             PacketData = keyValuePairs;
         }
 
-        public static Packet ParsePacket(string json) 
-            => new(JsonConvert.DeserializeObject<Dictionary<string, object>>(json));
+        public static Packet ParsePacket(string json) {
+            try {
+                return new(JsonConvert.DeserializeObject<Dictionary<string, object>>(json));
+            }
+            catch {
+
+                return null;
+            }
+        }
 
         public Packet(PacketType id) {
-            PacketData["id"] = (int)id;
+            PacketData["id"] = id;
             PacketData["timepstampe"] = DateTime.Now.ToString(new CultureInfo("en-GB"));
         }
 
@@ -49,11 +56,13 @@ namespace AmpleChatServer.Services.Packets {
         }
 
         public PacketType GetPacketId() {
+            
+            var id = int.Parse(PacketData["id"].ToString());
 
-            if (Enum.TryParse(Get("id"), out PacketType packetType))
-                return packetType;
+            if (id == null)
+                return PacketType.NULL;
 
-            return PacketType.NULL;
+            return (PacketType)id;
         }
 
         public override string ToString() {
