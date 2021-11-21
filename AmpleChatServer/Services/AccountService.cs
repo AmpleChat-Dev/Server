@@ -19,7 +19,7 @@ namespace AmpleChatServer.Services {
 
             var message = e.Data;
 
-            if (string.IsNullOrEmpty(message)) {
+            if (string.IsNullOrEmpty(message) || string.IsNullOrWhiteSpace(message)) {
                 SendPacket(new ErrorPacket()
                     .Message("Empty message"));
                 Sessions.CloseSession(ID);
@@ -27,6 +27,10 @@ namespace AmpleChatServer.Services {
             }
 
             var packet = ParsePacket(message);
+
+            if (packet == null) {
+                return;
+            }
 
             string json;
             var id = packet.GetPacketId();
